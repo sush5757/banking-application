@@ -1,5 +1,6 @@
 package com.bankapp.exception;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -27,5 +28,23 @@ public class GlobalExceptionHandler{
                 "timestamp", LocalDateTime.now(),
                 "error", message
         );
+    }
+    @ExceptionHandler(DuplicateResourceException.class)
+    public ResponseEntity<?> handleDuplicate(DuplicateResourceException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of(
+                        "timestamp", java.time.LocalDateTime.now(),
+                        "status", HttpStatus.CONFLICT.value(),
+                        "error", ex.getMessage()
+                ));
+    }
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<?> handleDataIntegrity(DataIntegrityViolationException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of(
+                        "timestamp", java.time.LocalDateTime.now(),
+                        "status", HttpStatus.CONFLICT.value(),
+                        "error", "Database constraint violation"
+                ));
     }
 }
