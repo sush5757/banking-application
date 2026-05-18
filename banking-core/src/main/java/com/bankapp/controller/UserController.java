@@ -3,6 +3,7 @@ package com.bankapp.controller;
 
 import com.bankapp.entity.User;
 import com.bankapp.service.UserService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
