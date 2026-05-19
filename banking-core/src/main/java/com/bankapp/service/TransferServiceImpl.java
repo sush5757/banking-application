@@ -1,5 +1,7 @@
 package com.bankapp.service;
 
+import com.bankapp.dto.DepositRequestDto;
+import com.bankapp.dto.DepositResponseDeto;
 import com.bankapp.dto.TransferRequestDto;
 import com.bankapp.dto.TransferResponseDto;
 import com.bankapp.entity.*;
@@ -13,6 +15,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -78,6 +81,44 @@ public class TransferServiceImpl implements TransactionService {
                 .transactionId(UUID.randomUUID().toString())
                 .status("SUCCESS")
                 .message("Transfer completed successfully")
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public DepositResponseDeto deposit(DepositRequestDto requestDto, String username) {
+
+        User employee = userRepository.findByUsername(username)
+                .orElseThrow(()->
+                        new ResourceNotFoundException("Employee not found"));
+
+        Account account = accountService.getByAccountNumber(requestDto.getAccountNumber());
+
+
+        if (account.getStatus() != AccountStatus.ACTIVE) {
+            throw new RuntimeException("Account is not active");
+        }
+
+        account.setBalance(
+                account.getBalance().add(requestDto.getAmount())
+        );
+
+        accountService.updateAccount(account);
+
+        Transaction txn = Transaction.builder()
+                .fromAccount("CASH_DEPOSIT")
+                .toAccount(account.getAccountNumber())
+                .amount(requestDto.getAmount())
+                .status(TransactionStatus.SUCCESS)
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        transactionRepository.save(txn);
+
+        return DepositResponseDeto.builder()
+                .transactionId(String.valueOf(txn.getId()))
+                .status("SUCCESS")
+                .message("Cash Deposit completed successfully")
                 .build();
     }
 }

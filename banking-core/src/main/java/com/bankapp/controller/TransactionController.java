@@ -1,11 +1,14 @@
 package com.bankapp.controller;
 
+import com.bankapp.dto.DepositRequestDto;
 import com.bankapp.dto.TransferRequestDto;
 import com.bankapp.dto.TransferResponseDto;
+import com.bankapp.dto.DepositResponseDeto;
 import com.bankapp.service.TransactionService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -25,4 +28,15 @@ public class TransactionController {
         String username = authentication.getName();
         return transactionService.transfer(request, username);
     }
+    @PreAuthorize("hasRole('EMPLOYEE')")
+    @PostMapping("/deposit")
+    public DepositResponseDeto deposit(@Valid @RequestBody DepositRequestDto request, Authentication authentication) {
+        String username = authentication.getName();
+        return transactionService.deposit(request, username);
+    }
+
+     /*public WithdrawResponseDto withdraw(@Valid @RequestBody WithdrawRequestDto request, Authentication authentication) {
+        String username = authentication.getName();
+        return transactionService.withdraw(request, username);
+    }*/
 }
