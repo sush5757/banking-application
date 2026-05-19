@@ -22,7 +22,7 @@ public class AccountController {
     private final AccountService accountService;
 
      // Implement account-related endpoints here (e.g., get account details, create account, etc.)
-    @PostMapping
+    @PostMapping("/create")
     public ResponseEntity<Account> createAccount(
             @RequestBody CreateAccountRequestDto request){
         return ResponseEntity.status(200).body(accountService.createAccount(request));
@@ -30,7 +30,7 @@ public class AccountController {
     }
 
 
-    @GetMapping
+    @GetMapping("/my-accounts")
     public ResponseEntity<List<AccountDto>> getMyAccounts(Authentication authentication) {
         String username = authentication.getName();
         List<AccountDto> accounts = accountService.getAccountsByUsername(username);
