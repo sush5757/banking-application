@@ -117,6 +117,7 @@ public class TransferServiceImpl implements TransactionService {
 
         return DepositResponseDeto.builder()
                 .transactionId(String.valueOf(txn.getId()))
+                .accountNumber(account.getAccountNumber())
                 .status("SUCCESS")
                 .message("Cash Deposit completed successfully")
                 .build();
