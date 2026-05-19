@@ -2,11 +2,13 @@ package com.bankapp.service;
 
 import com.bankapp.dto.TransferRequestDto;
 import com.bankapp.dto.TransferResponseDto;
-import com.bankapp.entity.Account;
-import com.bankapp.entity.Transaction;
-import com.bankapp.entity.TransactionStatus;
+import com.bankapp.entity.*;
+import com.bankapp.exception.AccountInactiveException;
 import com.bankapp.exception.InsufficientBalanceException;
+import com.bankapp.exception.ResourceNotFoundException;
+import com.bankapp.exception.UnauthorizedException;
 import com.bankapp.repository.TransactionRepository;
+import com.bankapp.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,26 +21,52 @@ import java.util.UUID;
 public class TransferServiceImpl implements TransactionService {
     private final AccountService accountService;
     private final TransactionRepository transactionRepository;
+    private final UserRepository userRepository;
 
     @Override
     @Transactional
-    public TransferResponseDto transfer(TransferRequestDto request) {
-        Account from = accountService.getByAccountNumber(request.getFromAccountNumber());
-        Account to = accountService.getByAccountNumber(request.getToAccountNumber());
+    public TransferResponseDto transfer(TransferRequestDto request, String username) {
+        User loggedInUser  = userRepository.findByUsername(username).orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        if (from.getBalance().compareTo(request.getAmount()) < 0) {
-            throw new InsufficientBalanceException("Insufficient balance in account: " + from.getAccountNumber());
+        Account sourceAccount = accountService.getByAccountNumber(request.getFromAccountNumber());
+
+        Account destinationAccount =
+                accountService.getByAccountNumber(
+                        request.getToAccountNumber()
+                );
+
+        if (!sourceAccount.getUser().getId()
+                .equals(loggedInUser.getId())) {
+
+            throw new UnauthorizedException(
+                    "You are not authorized to access this account"
+            );
         }
-        from.setBalance(from.getBalance().subtract(request.getAmount()));
-        to.setBalance(to.getBalance().add(request.getAmount()));
+        if (sourceAccount.getStatus() != AccountStatus.ACTIVE) {
+            throw new AccountInactiveException("Account is not active");
+        }
 
-        accountService.updateAccount(from);
-        accountService.updateAccount(to);
+        if (sourceAccount.getBalance().compareTo(request.getAmount()) < 0) {
+            throw new InsufficientBalanceException("Insufficient balance in account: " + sourceAccount.getAccountNumber());
+        }
+
+        if (sourceAccount.getAccountNumber()
+                .equals(destinationAccount.getAccountNumber())) {
+
+            throw new RuntimeException(
+                    "Cannot transfer to same account"
+            );
+        }
+        sourceAccount.setBalance(sourceAccount.getBalance().subtract(request.getAmount()));
+        destinationAccount.setBalance(destinationAccount.getBalance().add(request.getAmount()));
+
+        accountService.updateAccount(sourceAccount);
+        accountService.updateAccount(destinationAccount);
         // Here you would also create and save a Transaction entity using transactionRepository
 
         Transaction txn = Transaction.builder()
-                .fromAccount(from.getAccountNumber())
-                .toAccount(to.getAccountNumber())
+                .fromAccount(sourceAccount.getAccountNumber())
+                .toAccount(destinationAccount.getAccountNumber())
                 .amount(request.getAmount())
                 .status(TransactionStatus.SUCCESS)
                 .timestamp(LocalDateTime.now())

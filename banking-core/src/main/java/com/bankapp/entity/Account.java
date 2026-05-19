@@ -27,6 +27,9 @@ public class Account {
     @Enumerated(EnumType.STRING)
     private AccountStatus status;
 
+    @Enumerated(EnumType.STRING)
+    private AccountType accountType;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
