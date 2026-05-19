@@ -1,15 +1,17 @@
 package com.bankapp.controller;
 
 
+import com.bankapp.dto.AccountDto;
 import com.bankapp.dto.CreateAccountRequestDto;
 import com.bankapp.entity.Account;
 import com.bankapp.service.AccountService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/accounts")
@@ -21,9 +23,17 @@ public class AccountController {
 
      // Implement account-related endpoints here (e.g., get account details, create account, etc.)
     @PostMapping
-    public Account createAccount(
+    public ResponseEntity<Account> createAccount(
             @RequestBody CreateAccountRequestDto request){
-        return accountService.createAccount(request);
+        return ResponseEntity.status(200).body(accountService.createAccount(request));
 
+    }
+
+
+    @GetMapping
+    public ResponseEntity<List<AccountDto>> getMyAccounts(Authentication authentication) {
+        String username = authentication.getName();
+        List<AccountDto> accounts = accountService.getAccountsByUsername(username);
+        return ResponseEntity.ok(accounts);
     }
 }
