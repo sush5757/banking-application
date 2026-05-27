@@ -10,7 +10,6 @@ services:
       SPRING_DATASOURCE_PASSWORD: root
     depends_on:
       - mysql-db
-    restart: always
 
   mysql-db:
     image: mysql:8.0
