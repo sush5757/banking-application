@@ -10,6 +10,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: root
     depends_on:
       - mysql-db
+    restart: always
 
   mysql-db:
     image: mysql:8.0
@@ -18,3 +19,4 @@ services:
       MYSQL_DATABASE: banking_core     # auto-create DB
     ports:
       - "3307:3306"
+    restart: always
