@@ -2,7 +2,7 @@ name: Deploy Spring boot application to aws ec2 machine
 on:
   push:
     branches:
-      - Master
+      - master
 
 
 jobs:
