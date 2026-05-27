@@ -1,18 +1,18 @@
 package com.bankapp.service;
 
+import com.bankapp.dto.DepositRequestDto;
+import com.bankapp.dto.DepositResponseDeto;
 import com.bankapp.dto.TransferRequestDto;
 import com.bankapp.dto.TransferResponseDto;
 import com.bankapp.entity.*;
-import com.bankapp.exception.AccountInactiveException;
-import com.bankapp.exception.InsufficientBalanceException;
-import com.bankapp.exception.ResourceNotFoundException;
-import com.bankapp.exception.UnauthorizedException;
+import com.bankapp.exception.*;
 import com.bankapp.repository.TransactionRepository;
 import com.bankapp.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -26,7 +26,7 @@ public class TransferServiceImpl implements TransactionService {
     @Override
     @Transactional
     public TransferResponseDto transfer(TransferRequestDto request, String username) {
-        User loggedInUser  = userRepository.findByUsername(username).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        User loggedInUser  = userRepository.findByUsername(username).orElseThrow(() -> new ResourceNotFoundException("User not found: "+ username));
 
         Account sourceAccount = accountService.getByAccountNumber(request.getFromAccountNumber());
 
@@ -42,21 +42,27 @@ public class TransferServiceImpl implements TransactionService {
                     "You are not authorized to access this account"
             );
         }
+        // Account status check
         if (sourceAccount.getStatus() != AccountStatus.ACTIVE) {
-            throw new AccountInactiveException("Account is not active");
+            throw new AccountLockedException("Source account is not active");
         }
 
+        // Balance check
         if (sourceAccount.getBalance().compareTo(request.getAmount()) < 0) {
-            throw new InsufficientBalanceException("Insufficient balance in account: " + sourceAccount.getAccountNumber());
-        }
-
-        if (sourceAccount.getAccountNumber()
-                .equals(destinationAccount.getAccountNumber())) {
-
-            throw new RuntimeException(
-                    "Cannot transfer to same account"
+            throw new InsufficientBalanceException(
+                    "Insufficient balance in account: " + sourceAccount.getAccountNumber()
             );
         }
+
+        // Same account check
+        if (sourceAccount.getAccountNumber().equals(destinationAccount.getAccountNumber())) {
+            throw new InvalidTransactionException("Cannot transfer to same account");
+        }
+        // Destination account status check
+        if (destinationAccount.getStatus() != AccountStatus.ACTIVE) {
+            throw new InvalidTransactionException("Destination account is not active");
+        }
+
         sourceAccount.setBalance(sourceAccount.getBalance().subtract(request.getAmount()));
         destinationAccount.setBalance(destinationAccount.getBalance().add(request.getAmount()));
 
@@ -78,6 +84,45 @@ public class TransferServiceImpl implements TransactionService {
                 .transactionId(UUID.randomUUID().toString())
                 .status("SUCCESS")
                 .message("Transfer completed successfully")
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public DepositResponseDeto deposit(DepositRequestDto requestDto, String username) {
+
+        User employee = userRepository.findByUsername(username)
+                .orElseThrow(()->
+                        new ResourceNotFoundException("Employee not found"));
+
+        Account account = accountService.getByAccountNumber(requestDto.getAccountNumber());
+
+
+        // Account status check
+        if (account.getStatus() != AccountStatus.ACTIVE) {
+            throw new AccountLockedException("Account is not active");
+        }
+
+        account.setBalance(
+                account.getBalance().add(requestDto.getAmount())
+        );
+        accountService.updateAccount(account);
+
+        Transaction txn = Transaction.builder()
+                .fromAccount("CASH_DEPOSIT")
+                .toAccount(account.getAccountNumber())
+                .amount(requestDto.getAmount())
+                .status(TransactionStatus.SUCCESS)
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        transactionRepository.save(txn);
+
+        return DepositResponseDeto.builder()
+                .transactionId(String.valueOf(txn.getId()))
+                .accountNumber(account.getAccountNumber())
+                .status("SUCCESS")
+                .message("Cash Deposit completed successfully")
                 .build();
     }
 }
