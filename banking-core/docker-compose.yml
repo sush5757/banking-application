@@ -6,6 +6,8 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: root        # REQUIRED
       MYSQL_DATABASE: banking_core     # auto-create DB
+    volumes:
+      - mysql-data:/var/lib/mysql
     ports:
       - "3307:3306"
     restart: always
